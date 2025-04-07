@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/widgets/config.dart';
-import 'package:flutter_application_1/widgets/FeatureTile.dart';
 import 'package:flutter_application_1/widgets/BottomBar.dart';
 import 'package:flutter_application_1/widgets/AppBar.dart';
 import 'package:flutter_application_1/widgets/OptionCard.dart';
 import 'package:flutter_application_1/widgets/AnimalCard.dart';
+import 'package:flutter_application_1/widgets/config.dart';
+import 'package:flutter_application_1/widgets/FeatureTile.dart';
 
-
-import 'ScanScreen.dart'; 
+import 'ScanScreen.dart';
 import 'all_animals_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -16,6 +15,36 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  int _selectedIndex = 0;  // Current selected index for BottomBar
+
+  // Handle BottomBar item tap
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;  // Update the selected index
+    });
+
+    // Navigate to the selected screen
+    switch (index) {
+      case 0:
+        // Do nothing, we're already on HomePage
+        break;
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ScanScreen()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => AnimalsScreen()),
+        );
+        break;
+      default:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,7 +59,19 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Animaux", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue)),
-                Text("Voir Tout →", style: TextStyle(color: greenColor, fontSize: 14)),
+                GestureDetector(
+                  onTap: () {
+                    // Navigate to AnimalsScreen when tapped
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => AnimalsScreen()),
+                    );
+                  },
+                  child: Text(
+                    "Voir Tout →", 
+                    style: TextStyle(color: greenColor, fontSize: 14)
+                  ),
+                ),
               ],
             ),
             SizedBox(height: 10),
@@ -55,7 +96,7 @@ class _HomePageState extends State<HomePage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => ScanScreen()), // <-- Open AnalysePage
+                  MaterialPageRoute(builder: (context) => ScanScreen()),
                 );
               },
             ),
@@ -66,15 +107,14 @@ class _HomePageState extends State<HomePage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => AnimalsScreen()), // <-- Open AnalysePage
+                  MaterialPageRoute(builder: (context) => AnimalsScreen()),
                 );
               },
-              ),
+            ),
           ],
         ),
       ),
-      bottomNavigationBar: BottomBar(),
+      bottomNavigationBar: BottomBar(selectedIndex: _selectedIndex, onItemTapped: _onItemTapped),  // Pass the index to BottomBar
     );
   }
 }
-

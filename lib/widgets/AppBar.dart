@@ -12,7 +12,7 @@ final AppBar AppBarWidget = AppBar(
     ),
     clipBehavior: Clip.hardEdge,
     child: Image.asset(
-      'assets/images/logo_vert.png',
+      'assets/images/logo-wildlens.png',
       height: 50,
       fit: BoxFit.cover,
     ),

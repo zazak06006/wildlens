@@ -141,7 +141,13 @@ class AnimalScreen extends StatelessWidget {
       ),
 
       // 🟢 Bottom Navigation Bar
-      bottomNavigationBar: BottomBar(),
+      bottomNavigationBar: BottomBar(
+        selectedIndex: 2, // Set the selected index (change this to whatever you want)
+        onItemTapped: (index) {
+          // Handle item tapped action
+          // You can add the navigation logic here if needed
+        },
+      ),
     );
   }
 }

@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 
-class BottomBar extends StatefulWidget {
-  @override
-  _BottomBarState createState() => _BottomBarState();
-}
+class BottomBar extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onItemTapped;
 
-class _BottomBarState extends State<BottomBar> {
-  int _selectedIndex = 0;
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  BottomBar({required this.selectedIndex, required this.onItemTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +13,13 @@ class _BottomBarState extends State<BottomBar> {
       type: BottomNavigationBarType.fixed,
       selectedItemColor: Colors.blue,
       unselectedItemColor: Colors.grey,
-      currentIndex: _selectedIndex,
-      onTap: _onItemTapped, // Updates selected index
+      currentIndex: selectedIndex,
+      onTap: onItemTapped,
       items: [
-        BottomNavigationBarItem(icon: Icon(Iconsax.home_2), label: ""),
-        BottomNavigationBarItem(icon: Icon(Iconsax.image), label: ""),
-        BottomNavigationBarItem(icon: Icon(Iconsax.location), label: ""),
-        BottomNavigationBarItem(icon: Icon(Iconsax.clock), label: ""),
+        BottomNavigationBarItem(icon: Icon(Iconsax.home_2), label: "Home"),
+        BottomNavigationBarItem(icon: Icon(Iconsax.image), label: "Scan"),
+        BottomNavigationBarItem(icon: Icon(Iconsax.location), label: "Animals"),
+        BottomNavigationBarItem(icon: Icon(Iconsax.clock), label: "History"),
       ],
     );
   }
