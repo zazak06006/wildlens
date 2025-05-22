@@ -49,5 +49,11 @@
 		<true/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<false/>
+		<key>NSCameraUsageDescription</key>
+		<string>Nous avons besoin d'accéder à votre caméra pour prendre des photos d'empreintes animales.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Nous avons besoin d'accéder à votre galerie pour importer des photos d'empreintes animales.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Nous avons besoin d'accéder à votre microphone lors de l'enregistrement vidéo.</string>
 	</dict>
 </plist>

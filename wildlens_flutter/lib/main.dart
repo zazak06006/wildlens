@@ -1,17 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_application_1/widgets/config.dart';
+import 'widgets/app_routes.dart';
 import 'splash_screen.dart';
 import 'home_page.dart'; // Import HomePage from another file
+import 'ScanScreen.dart';
+import 'all_animals_page.dart';
+import 'animal_page.dart';
 
 void main() {
-  runApp(MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set system UI overlay style for a more immersive experience
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: AppColors.background,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+  
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'WildLens',
+      theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: FirstSplashScreen(), // Start with the first splash screen
+      initialRoute: AppRoutes.splashScreen,
+      onGenerateRoute: AppRoutes.generateRoute,
     );
   }
 }
@@ -48,7 +71,7 @@ class ThirdSplashScreen extends StatelessWidget {
     return SplashScreen(
       imagePath: 'assets/images/splash_background3.png',
       title: 'Nature Journey',
-      subtitle: 'Vivez l’aventure avec nous.',
+      subtitle: "Vivez l'aventure avec nous.",
       indicators: [false, false, true],
       nextScreen: HomePage(), // 👈 Navigate to your actual homepage after this
     );
