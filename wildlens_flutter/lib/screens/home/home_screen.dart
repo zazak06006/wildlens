@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/widgets/config.dart';
 import 'package:flutter_application_1/widgets/app_routes.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_application_1/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,96 +17,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _selectedIndex = 0;
   final ScrollController _scrollController = ScrollController();
   late AnimationController _animationController;
-  
-  // Enhanced data models with more details
-  final List<Map<String, dynamic>> _featuredAnimals = [
-    {
-      'name': 'Loup Gris',
-      'species': 'Canis lupus',
-      'image': 'https://images.unsplash.com/photo-1583589261738-c7eac1b20537?q=80&w=2670&auto=format&fit=crop',
-      'tags': ['Prédateur', 'Forêt', 'Mammifère'],
-      'conservationStatus': 'Vulnérable',
-      'habitat': 'Forêts tempérées et boréales',
-      'footprintType': 'Digitigrade',
-    },
-    {
-      'name': 'Fennec',
-      'species': 'Vulpes zerda',
-      'image': 'https://images.unsplash.com/photo-1474511320723-9a56873867b5?q=80&w=2672&auto=format&fit=crop',
-      'tags': ['Désert', 'Nocturne', 'Mammifère'],
-      'conservationStatus': 'Préoccupation mineure',
-      'habitat': 'Déserts nord-africains',
-      'footprintType': 'Digitigrade',
-    },
-    {
-      'name': 'Ours Brun',
-      'species': 'Ursus arctos',
-      'image': 'https://images.unsplash.com/photo-1589656966895-2f33e7653819?q=80&w=2670&auto=format&fit=crop',
-      'tags': ['Prédateur', 'Forêt', 'Mammifère'],
-      'conservationStatus': 'Préoccupation mineure',
-      'habitat': 'Forêts, montagnes et toundra',
-      'footprintType': 'Plantigrade',
-    },
-    {
-      'name': 'Tigre',
-      'species': 'Panthera tigris',
-      'image': 'https://images.unsplash.com/photo-1549366021-9f761d450615?q=80&w=2670&auto=format&fit=crop',
-      'tags': ['Prédateur', 'Jungle', 'Mammifère'],
-      'conservationStatus': 'En danger',
-      'habitat': 'Forêts tropicales et de mangrove',
-      'footprintType': 'Digitigrade',
-    },
-  ];
-  
-  final List<Map<String, dynamic>> _recentScans = [
-    {
-      'name': 'Empreinte de Cerf',
-      'date': 'Il y a 2 jours',
-      'location': 'Forêt de Fontainebleau',
-      'image': 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?q=80&w=2787&auto=format&fit=crop',
-      'accuracy': '95%',
-      'animalDetails': 'Cervus elaphus',
-    },
-    {
-      'name': 'Trace de Renard',
-      'date': 'Il y a 1 semaine',
-      'location': 'Parc Naturel Régional',
-      'image': 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?q=80&w=2787&auto=format&fit=crop',
-      'accuracy': '87%',
-      'animalDetails': 'Vulpes vulpes',
-    },
-    {
-      'name': 'Empreinte de Loup',
-      'date': 'Il y a 2 semaines',
-      'location': 'Massif des Vosges',
-      'image': 'https://images.unsplash.com/photo-1586180418055-27664f9c61c6?q=80&w=2670&auto=format&fit=crop',
-      'accuracy': '92%',
-      'animalDetails': 'Canis lupus',
-    },
-  ];
-  
-  // Data for ecosystem section
-  final List<Map<String, dynamic>> _ecosystems = [
-    {
-      'name': 'Forêt Tempérée',
-      'animals': 42,
-      'location': 'Europe',
-      'image': 'https://images.unsplash.com/photo-1473773508845-188df298d2d1?q=80&w=2374&auto=format&fit=crop',
-    },
-    {
-      'name': 'Savane Africaine',
-      'animals': 56,
-      'location': 'Afrique',
-      'image': 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=2371&auto=format&fit=crop',
-    },
-    {
-      'name': 'Forêt Amazonienne',
-      'animals': 78,
-      'location': 'Amérique du Sud',
-      'image': 'https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=2371&auto=format&fit=crop',
-    },
-  ];
 
+  List<dynamic> _featuredAnimals = [];
+  List<dynamic> _recentScans = [];
+  List<dynamic> _ecosystems = [];
+  bool _isLoading = true;
+  String? _error;
+  
   @override
   void initState() {
     super.initState();
@@ -117,6 +35,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     // Add haptic feedback on init for futuristic feel
     HapticFeedback.lightImpact();
+    _fetchHomeData();
+  }
+
+  Future<void> _fetchHomeData() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final animals = await ApiService().getAnimals();
+      final scans = await ApiService().getScans();
+      final ecosystems = await ApiService().getEcosystems();
+      setState(() {
+        _featuredAnimals = animals; // Optionally filter for featured
+        _recentScans = scans;
+        _ecosystems = ecosystems;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -211,8 +155,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           }),
                           const SizedBox(height: 16),
                           _buildRecentScans(),
-                          const SizedBox(height: 30),
-                          _buildVirtualGuideCard(),
                           const SizedBox(height: 50),
                         ],
                       ),
@@ -298,14 +240,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               // Action buttons
               Row(
                 children: [
-                  _buildActionIconButton(
-                    icon: Icons.notifications_outlined,
-                    color: AppColors.accent,
-                    onTap: () {
-                      // Show notifications
-                    },
-                    hasNotification: true,
-                  ),
                   const SizedBox(width: 16),
                   GestureDetector(
                     onTap: () {
@@ -1157,121 +1091,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           ),
         );
       },
-    );
-  }
-
-  // Virtual Guide feature card
-  Widget _buildVirtualGuideCard() {
-    return FuturisticUI.holographicCard(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.quaternary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.quaternary.withOpacity(0.4),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Icon(
-                    Icons.assistant,
-                    color: AppColors.quaternary,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Guide Virtuel",
-                        style: AppTextStyles.subheading.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "Votre assistant personnel d'exploration",
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                border: Border.all(
-                  color: AppColors.quaternary.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    "Besoin d'aide pour identifier une empreinte ? Posez une question au guide virtuel pour des informations détaillées sur les animaux et leurs habitats.",
-                    style: AppTextStyles.bodySmall,
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.cardDark,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(
-                        color: AppColors.quaternary.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.mic,
-                          color: AppColors.textSecondary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            "Posez votre question...",
-                            style: AppTextStyles.body.copyWith(
-                              color: AppColors.textHint,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: AppGradients.neonGradient,
-                          ),
-                          child: const Icon(
-                            Icons.send,
-                            color: Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
   

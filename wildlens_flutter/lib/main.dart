@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/widgets/config.dart';
 import 'widgets/app_routes.dart';
-import 'splash_screen.dart';
-import 'home_page.dart'; // Import HomePage from another file
-import 'ScanScreen.dart';
-import 'all_animals_page.dart';
-import 'animal_page.dart';
+import 'services/service_provider.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize services
+  await ServiceProvider.initialize();
   
   // Set system UI overlay style for a more immersive experience
   SystemChrome.setSystemUIOverlayStyle(
@@ -35,45 +34,6 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: AppRoutes.splashScreen,
       onGenerateRoute: AppRoutes.generateRoute,
-    );
-  }
-}
-
-class FirstSplashScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SplashScreen(
-      imagePath: 'assets/images/lot_of_animals.png',
-      title: 'WildLens',
-      subtitle: 'Explorez la faune qui vous entoure.',
-      indicators: [true, false, false],
-      nextScreen: SecondSplashScreen(), // 👈 Navigate to the second screen
-    );
-  }
-}
-
-class SecondSplashScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SplashScreen(
-      imagePath: 'assets/images/splash_background2.png',
-      title: 'Safari Tour',
-      subtitle: 'Découvrez la nature sauvage.',
-      indicators: [false, true, false],
-      nextScreen: ThirdSplashScreen(), // 👈 Navigate to the third screen
-    );
-  }
-}
-
-class ThirdSplashScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SplashScreen(
-      imagePath: 'assets/images/splash_background3.png',
-      title: 'Nature Journey',
-      subtitle: "Vivez l'aventure avec nous.",
-      indicators: [false, false, true],
-      nextScreen: HomePage(), // 👈 Navigate to your actual homepage after this
     );
   }
 }

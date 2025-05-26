@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_application_1/widgets/config.dart';
 import 'package:flutter_application_1/widgets/app_routes.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../services/api_service.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({Key? key}) : super(key: key);
@@ -24,28 +25,8 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   String _scanMode = "empreinte"; // Options: "empreinte", "animal"
   final ImagePicker _picker = ImagePicker();
   
-  // Mock analyzed results
   Map<String, dynamic>? _analysisResult;
-  final List<Map<String, dynamic>> _possibleMatches = [
-    {
-      'name': 'Loup Gris',
-      'scientific': 'Canis lupus',
-      'match': 92,
-      'image': 'https://images.unsplash.com/photo-1583589261738-c7eac1b20537?q=80&w=2670&auto=format&fit=crop',
-    },
-    {
-      'name': 'Coyote',
-      'scientific': 'Canis latrans',
-      'match': 78,
-      'image': 'https://images.unsplash.com/photo-1561731157-7f805950bad5?q=80&w=2533&auto=format&fit=crop',
-    },
-    {
-      'name': 'Renard Roux',
-      'scientific': 'Vulpes vulpes',
-      'match': 45,
-      'image': 'https://images.unsplash.com/photo-1474511320723-9a56873867b5?q=80&w=2672&auto=format&fit=crop',
-    }
-  ];
+  String? _error;
 
   @override
   void initState() {
@@ -102,25 +83,15 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
           _isAnalyzing = true;
           _showResult = false;
           _analysisResult = null;
+          _error = null;
         });
-        
-        // Simulate analysis time
-        await Future.delayed(const Duration(seconds: 3));
-        
-        setState(() {
-          _isAnalyzing = false;
-          _showResult = true;
-          // Set the top match as the analysis result
-          _analysisResult = _possibleMatches[0];
-        });
+        await _analyzeImage(image.path);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la prise de photo: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      setState(() {
+        _error = 'Erreur lors de la prise de photo: $e';
+        _isAnalyzing = false;
+      });
     }
   }
 
@@ -138,25 +109,32 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
           _isAnalyzing = true;
           _showResult = false;
           _analysisResult = null;
+          _error = null;
         });
-        
-        // Simulate analysis time
-        await Future.delayed(const Duration(seconds: 3));
-        
-        setState(() {
-          _isAnalyzing = false;
-          _showResult = true;
-          // Set the top match as the analysis result
-          _analysisResult = _possibleMatches[0];
-        });
+        await _analyzeImage(image.path);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la sélection d\'image: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      setState(() {
+        _error = 'Erreur lors de la sélection d\'image: $e';
+        _isAnalyzing = false;
+      });
+    }
+  }
+  
+  Future<void> _analyzeImage(String path) async {
+    try {
+      final result = await ApiService().analyzeFootprint(path);
+      setState(() {
+        _isAnalyzing = false;
+        _showResult = true;
+        _analysisResult = result;
+      });
+    } catch (e) {
+      setState(() {
+        _isAnalyzing = false;
+        _showResult = false;
+        _error = 'Erreur lors de l\'analyse: $e';
+      });
     }
   }
   
@@ -165,6 +143,16 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
     setState(() {
       _scanMode = _scanMode == "empreinte" ? "animal" : "empreinte";
     });
+  }
+
+  // Getter for possible matches from analysis result
+  List<Map<String, dynamic>> get _possibleMatches {
+    if (_analysisResult == null) return [];
+    if (_analysisResult!['possible_matches'] is List) {
+      return List<Map<String, dynamic>>.from(_analysisResult!['possible_matches']);
+    }
+    // Fallback: treat the main result as the only match
+    return [_analysisResult!];
   }
 
   @override
@@ -1014,24 +1002,6 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                   },
                   icon: Icons.visibility,
                   color: AppColors.accent,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FuturisticUI.techButton(
-                  label: "VOIR EN AR",
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.arView,
-                      arguments: {
-                        'modelName': match['name'].toString().toLowerCase().contains('loup') ? 'wolf' : 
-                                    match['name'].toString().toLowerCase().contains('ours') ? 'bear' : 'fox',
-                      },
-                    );
-                  },
-                  icon: Icons.view_in_ar,
-                  color: AppColors.secondary,
                 ),
               ),
             ],

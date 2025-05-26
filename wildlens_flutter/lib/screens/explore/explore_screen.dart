@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/widgets/config.dart';
 import 'package:flutter_application_1/widgets/app_routes.dart';
+import 'package:flutter_application_1/services/api_service.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({Key? key}) : super(key: key);
@@ -13,45 +14,9 @@ class ExploreScreen extends StatefulWidget {
 
 class _ExploreScreenState extends State<ExploreScreen> {
   int _selectedIndex = 3;
-  
-  // Mock data for ecosystems
-  final List<Map<String, dynamic>> _ecosystems = [
-    {
-      'name': 'Forêt Tempérée',
-      'animals': 42,
-      'location': 'Europe',
-      'image': 'https://images.unsplash.com/photo-1473773508845-188df298d2d1?q=80&w=2374&auto=format&fit=crop',
-      'description': 'Écosystème caractérisé par des arbres feuillus, une faune diversifiée et des saisons bien définies.',
-    },
-    {
-      'name': 'Savane Africaine',
-      'animals': 56,
-      'location': 'Afrique',
-      'image': 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=2371&auto=format&fit=crop',
-      'description': 'Vastes plaines herbeuses avec quelques arbres épars, abritant de grands troupeaux d\'herbivores.',
-    },
-    {
-      'name': 'Forêt Amazonienne',
-      'animals': 78,
-      'location': 'Amérique du Sud',
-      'image': 'https://images.unsplash.com/photo-1511497584788-876760111969?q=80&w=2371&auto=format&fit=crop',
-      'description': 'La plus grande forêt tropicale au monde, connue pour sa biodiversité exceptionnelle.',
-    },
-    {
-      'name': 'Désert du Sahara',
-      'animals': 23,
-      'location': 'Afrique du Nord',
-      'image': 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=2676&auto=format&fit=crop',
-      'description': 'Vaste étendue aride aux adaptations remarquables pour résister aux conditions extrêmes.',
-    },
-    {
-      'name': 'Toundra Arctique',
-      'animals': 29,
-      'location': 'Cercle Arctique',
-      'image': 'https://images.unsplash.com/photo-1520564816385-4f9d711941aa?q=80&w=2670&auto=format&fit=crop',
-      'description': 'Région froide caractérisée par un sol gelé en permanence et une végétation basse.',
-    },
-  ];
+  List<dynamic> _ecosystems = [];
+  bool _isLoading = true;
+  String? _error;
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
@@ -75,8 +40,29 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   void initState() {
     super.initState();
-    // Add haptic feedback for a more immersive experience
     HapticFeedback.lightImpact();
+    _fetchEcosystems();
+  }
+
+  Future<void> _fetchEcosystems() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final ecosystems = await ApiService().getEcosystems();
+      setState(() {
+        _ecosystems = ecosystems;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -299,22 +285,32 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            physics: const BouncingScrollPhysics(),
-            itemCount: _ecosystems.length,
-            itemBuilder: (context, index) {
-              final ecosystem = _ecosystems[index];
-              return _buildEcosystemCard(ecosystem);
-            },
-          ),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Text(
+                      _error!,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.red,
+                      ),
+                      textAlign: TextAlign.center,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _ecosystems.length,
+                      itemBuilder: (context, index) {
+                        final ecosystem = _ecosystems[index];
+                        return _buildEcosystemCard(ecosystem);
+                      },
+                    ),
         ),
       ],
     );
   }
   
   // Ecosystem card
-  Widget _buildEcosystemCard(Map<String, dynamic> ecosystem) {
+  Widget _buildEcosystemCard(dynamic ecosystem) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: FuturisticUI.glowCard(

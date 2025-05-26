@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/widgets/config.dart';
 import 'package:flutter_application_1/widgets/app_routes.dart';
+import '../../services/api_service.dart';
 
 class AnimalsScreen extends StatefulWidget {
   const AnimalsScreen({Key? key}) : super(key: key);
@@ -20,63 +21,16 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
-  // Mock data for animals
-  final List<Map<String, dynamic>> _animalsList = [
-    {
-      'name': 'Loup Gris',
-      'scientific': 'Canis lupus',
-      'category': 'Mammifères',
-      'image': 'https://images.unsplash.com/photo-1583589261738-c7eac1b20537?q=80&w=2670&auto=format&fit=crop',
-      'endangered': true,
-    },
-    {
-      'name': 'Ours Brun',
-      'scientific': 'Ursus arctos',
-      'category': 'Mammifères',
-      'image': 'https://images.unsplash.com/photo-1589656966895-2f33e7653819?q=80&w=2670&auto=format&fit=crop',
-      'endangered': false,
-    },
-    {
-      'name': 'Renard Roux',
-      'scientific': 'Vulpes vulpes',
-      'category': 'Mammifères',
-      'image': 'https://images.unsplash.com/photo-1474511320723-9a56873867b5?q=80&w=2672&auto=format&fit=crop',
-      'endangered': false,
-    },
-    {
-      'name': 'Lynx Boréal',
-      'scientific': 'Lynx lynx',
-      'category': 'Mammifères',
-      'image': 'https://images.unsplash.com/photo-1551972873-b7e8754e8e26?q=80&w=2574&auto=format&fit=crop',
-      'endangered': true,
-    },
-    {
-      'name': 'Aigle Royal',
-      'scientific': 'Aquila chrysaetos',
-      'category': 'Oiseaux',
-      'image': 'https://images.unsplash.com/photo-1611689342806-0863700ce1e4?q=80&w=2651&auto=format&fit=crop',
-      'endangered': false,
-    },
-    {
-      'name': 'Vipère Aspic',
-      'scientific': 'Vipera aspis',
-      'category': 'Reptiles',
-      'image': 'https://images.unsplash.com/photo-1581879003843-bfc3f6f38f2d?q=80&w=2574&auto=format&fit=crop',
-      'endangered': false,
-    },
-  ];
+  List<dynamic> _animalsList = [];
+  bool _isLoading = true;
+  String? _error;
 
-  // Filtered animals based on category and search
-  List<Map<String, dynamic>> get _filteredAnimals {
+  List<dynamic> get _filteredAnimals {
     return _animalsList.where((animal) {
-      // Filter by category
-      final categoryMatch = _selectedCategory == "Tous" || animal['category'] == _selectedCategory;
-      
-      // Filter by search text
-      final searchMatch = _searchController.text.isEmpty || 
-          animal['name'].toLowerCase().contains(_searchController.text.toLowerCase()) ||
-          animal['scientific'].toLowerCase().contains(_searchController.text.toLowerCase());
-      
+      final categoryMatch = _selectedCategory == "Tous" || (animal['category'] ?? '') == _selectedCategory;
+      final searchMatch = _searchController.text.isEmpty ||
+          (animal['name'] ?? '').toLowerCase().contains(_searchController.text.toLowerCase()) ||
+          (animal['scientific_name'] ?? '').toLowerCase().contains(_searchController.text.toLowerCase());
       return categoryMatch && searchMatch;
     }).toList();
   }
@@ -88,11 +42,30 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-
     _animationController.forward(from: 0.0);
-    
-    // Add haptic feedback for a more immersive experience
     HapticFeedback.lightImpact();
+    _fetchAnimals();
+  }
+
+  Future<void> _fetchAnimals() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final animals = await ApiService().getAnimals();
+      setState(() {
+        _animalsList = animals;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -104,11 +77,8 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
 
   void _onItemTapped(int index) {
     if (index == _selectedIndex) return;
-    
     HapticFeedback.selectionClick();
     setState(() => _selectedIndex = index);
-    
-    // Navigate based on index
     switch (index) {
       case 0:
         Navigator.pushReplacementNamed(context, AppRoutes.home);
@@ -145,22 +115,18 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
-          // Background with particle effect
           _buildBackgroundEffect(),
-          
-          // Main content
           SafeArea(
             child: Column(
               children: [
-                // Top bar
                 _buildTopBar(),
-                
-                // Category tabs
                 _buildCategoryTabs(),
-                
-                // Main content area
                 Expanded(
-                  child: _buildAnimalsList(),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null
+                          ? Center(child: Text('Erreur: $_error'))
+                          : _buildAnimalsList(),
                 ),
               ],
             ),

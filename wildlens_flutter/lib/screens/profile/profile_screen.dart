@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/widgets/config.dart';
 import 'package:flutter_application_1/widgets/app_routes.dart';
+import 'package:flutter_application_1/services/api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -12,46 +13,42 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Mock user data
-  final Map<String, dynamic> _userData = {
-    'name': 'Alex Durand',
-    'email': 'alex.durand@example.com',
-    'avatar': 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=2670&auto=format&fit=crop',
-    'bio': 'Passionné de nature et amateur de randonnée. Je documente la faune sauvage lors de mes excursions.',
-    'totalScans': 42,
-    'animalsIdentified': 18,
-    'favoriteBiome': 'Forêt tempérée',
-    'memberSince': 'Mars 2024',
-  };
-  
-  // Mock activity history
-  final List<Map<String, dynamic>> _activityHistory = [
-    {
-      'type': 'scan',
-      'title': 'Empreinte de Loup Gris',
-      'date': 'Il y a 2 jours',
-      'location': 'Forêt de Fontainebleau',
-      'image': 'https://images.unsplash.com/photo-1586180418055-27664f9c61c6?q=80&w=2670&auto=format&fit=crop',
-    },
-    {
-      'type': 'bookmark',
-      'title': 'Ajout aux favoris: Renard Roux',
-      'date': 'Il y a 5 jours',
-      'image': 'https://images.unsplash.com/photo-1474511320723-9a56873867b5?q=80&w=2672&auto=format&fit=crop',
-    },
-    {
-      'type': 'explore',
-      'title': 'Écosystème exploré: Savane Africaine',
-      'date': 'Il y a 1 semaine',
-      'image': 'https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?q=80&w=2371&auto=format&fit=crop',
-    },
-  ];
+  Map<String, dynamic>? _userData;
+  List<dynamic> _badges = [];
+  List<dynamic> _activityHistory = [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    // Add haptic feedback for a more immersive experience
     HapticFeedback.lightImpact();
+    _fetchProfile();
+  }
+
+  Future<void> _fetchProfile() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final profile = await ApiService().getProfile();
+      final badges = await ApiService().getBadges();
+      final activity = await ApiService().getActivityHistory();
+      setState(() {
+        _userData = profile;
+        _badges = badges;
+        _activityHistory = activity;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -66,115 +63,145 @@ class _ProfileScreenState extends State<ProfileScreen> {
               gradient: AppGradients.backgroundGradient,
             ),
           ),
-          
-          // Main content
           SafeArea(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // App bar
-                SliverAppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  leading: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardDark.withOpacity(0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        color: AppColors.accent,
-                      ),
-                    ),
-                  ),
-                  actions: [
-                    Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardDark.withOpacity(0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.settings,
-                          color: AppColors.accent,
-                        ),
-                        onPressed: () {
-                          // Open settings
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                
-                // User profile header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: _buildProfileHeader(),
-                  ),
-                ),
-                
-                // Stats summary
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: _buildStatsSummary(),
-                  ),
-                ),
-                
-                // Section title
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 30, 20, 16),
-                    child: Text(
-                      "Activité récente",
-                      style: AppTextStyles.subheading,
-                    ),
-                  ),
-                ),
-                
-                // Activity history
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final activity = _activityHistory[index];
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                        child: _buildActivityItem(activity),
-                      );
-                    },
-                    childCount: _activityHistory.length,
-                  ),
-                ),
-                
-                // Badges section
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 30, 20, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Badges débloqués",
-                          style: AppTextStyles.subheading,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildBadgesGrid(),
-                      ],
-                    ),
-                  ),
-                ),
-                
-                // Bottom spacing
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 50),
-                ),
-              ],
-            ),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(child: Text('Erreur: \\$_error'))
+                    : _userData == null
+                        ? const Center(child: Text('Aucune donnée utilisateur'))
+                        : CustomScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            slivers: [
+                              // App bar
+                              SliverAppBar(
+                                backgroundColor: Colors.transparent,
+                                elevation: 0,
+                                leading: GestureDetector(
+                                  onTap: () => Navigator.pop(context),
+                                  child: Container(
+                                    margin: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.cardDark.withOpacity(0.5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_back,
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  Container(
+                                    margin: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.cardDark.withOpacity(0.5),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(
+                                        Icons.settings,
+                                        color: AppColors.accent,
+                                      ),
+                                      onPressed: () {
+                                        // Open settings
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // User profile header
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: _buildProfileHeader(),
+                                ),
+                              ),
+                              // Stats summary
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  child: _buildStatsSummary(),
+                                ),
+                              ),
+                              // Section title
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(20, 30, 20, 16),
+                                  child: Text(
+                                    "Activité récente",
+                                    style: AppTextStyles.subheading,
+                                  ),
+                                ),
+                              ),
+                              // Activity history (placeholder or from API)
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final activity = _activityHistory.isNotEmpty
+                                        ? _activityHistory[index]
+                                        : null;
+                                    return activity != null
+                                        ? Padding(
+                                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                                            child: _buildActivityItem(activity),
+                                          )
+                                        : Padding(
+                                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                                            child: Text('Aucune activité récente'),
+                                          );
+                                  },
+                                  childCount: _activityHistory.isNotEmpty ? _activityHistory.length : 1,
+                                ),
+                              ),
+                              // Badges section (optional: fetch from API if available)
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(20, 30, 20, 16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Badges débloqués",
+                                        style: AppTextStyles.subheading,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildBadgesGrid(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              // Logout button
+                              SliverToBoxAdapter(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.error,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.logout, color: Colors.white),
+                                      label: Text('Se déconnecter', style: AppTextStyles.button.copyWith(color: Colors.white)),
+                                      onPressed: () async {
+                                        await ApiService().logout();
+                                        if (!mounted) return;
+                                        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Bottom spacing
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 50),
+                              ),
+                            ],
+                          ),
           ),
         ],
       ),
@@ -183,6 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   // Profile header with avatar and user info
   Widget _buildProfileHeader() {
+    if (_userData == null) return const SizedBox.shrink();
     return Column(
       children: [
         // Avatar
@@ -205,17 +233,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(50),
-            child: Image.network(
-              _userData['avatar'],
-              fit: BoxFit.cover,
-            ),
+            child: _userData!["avatar"] != null && _userData!["avatar"].toString().isNotEmpty
+                ? Image.network(_userData!["avatar"], fit: BoxFit.cover)
+                : const Icon(Icons.person, size: 60, color: Colors.white),
           ),
         ),
         const SizedBox(height: 16),
         
         // User name
         Text(
-          _userData['name'],
+          _userData!["name"] ?? '',
           style: AppTextStyles.displayMedium.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -223,44 +250,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
         
         // User email
         Text(
-          _userData['email'],
+          _userData!["email"] ?? '',
           style: AppTextStyles.body.copyWith(
             color: AppColors.textSecondary,
           ),
         ),
         
-        // Member since
-        Container(
-          margin: const EdgeInsets.only(top: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.quaternary.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(AppRadius.circular),
-          ),
-          child: Text(
-            "Membre depuis ${_userData['memberSince']}",
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.quaternary,
-              fontWeight: FontWeight.bold,
+        // Member since (optional)
+        if (_userData!["memberSince"] != null)
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.quaternary.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(AppRadius.circular),
+            ),
+            child: Text(
+              "Membre depuis \\${_userData!["memberSince"]}",
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.quaternary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-        ),
         
         // Bio
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Text(
-            _userData['bio'],
-            style: AppTextStyles.body,
-            textAlign: TextAlign.center,
+        if (_userData!["bio"] != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              _userData!["bio"],
+              style: AppTextStyles.body,
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
         
         // Edit profile button
         FuturisticUI.techButton(
           label: "MODIFIER LE PROFIL",
-          onPressed: () {
-            // Edit profile
+          onPressed: () async {
+            final result = await Navigator.pushNamed(context, AppRoutes.editProfile, arguments: _userData);
+            if (result == true) {
+              _fetchProfile();
+            }
           },
           icon: Icons.edit,
           color: AppColors.accent,
@@ -271,6 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   // Stats summary grid
   Widget _buildStatsSummary() {
+    if (_userData == null) return const SizedBox.shrink();
     return FuturisticUI.glassContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,12 +320,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildStatItem(
-                _userData['totalScans'].toString(), 
+                (_userData!["totalScans"] ?? 0).toString(), 
                 "Scans", 
                 Icons.camera_alt
               ),
               _buildStatItem(
-                _userData['animalsIdentified'].toString(), 
+                (_userData!["animalsIdentified"] ?? 0).toString(), 
                 "Animaux identifiés", 
                 Icons.pets
               ),
@@ -505,16 +538,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   // Badges grid
   Widget _buildBadgesGrid() {
-    // Mock badges
-    final badges = [
-      {'name': 'Explorateur débutant', 'icon': Icons.adjust, 'color': AppColors.quaternary, 'unlocked': true},
-      {'name': 'Traqueur de loups', 'icon': Icons.pets, 'color': AppColors.accent, 'unlocked': true},
-      {'name': 'Photographe animalier', 'icon': Icons.camera, 'color': AppColors.secondary, 'unlocked': true},
-      {'name': 'Maître de la forêt', 'icon': Icons.forest, 'color': AppColors.success, 'unlocked': false},
-      {'name': 'Expert en empreintes', 'icon': Icons.fingerprint, 'color': AppColors.tertiary, 'unlocked': false},
-      {'name': 'Ami des animaux', 'icon': Icons.favorite, 'color': AppColors.error, 'unlocked': false},
-    ];
-    
+    if (_badges.isEmpty) {
+      return Center(
+        child: Text('Aucun badge débloqué', style: AppTextStyles.caption),
+      );
+    }
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -524,70 +552,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: badges.length,
+      itemCount: _badges.length,
       itemBuilder: (context, index) {
-        final badge = badges[index];
+        final badge = _badges[index];
         return _buildBadgeItem(badge);
       },
     );
   }
   
   // Badge item
-  Widget _buildBadgeItem(Map<String, dynamic> badge) {
-    final bool unlocked = badge['unlocked'] as bool;
-    
+  Widget _buildBadgeItem(dynamic badge) {
+    // Use badge_name, badge_image, awarded_at from API
     return Column(
       children: [
         Container(
           width: 60,
           height: 60,
           decoration: BoxDecoration(
-            color: unlocked 
-                ? badge['color'].withOpacity(0.2) 
-                : Colors.grey.withOpacity(0.1),
+            color: AppColors.accent.withOpacity(0.2),
             shape: BoxShape.circle,
             border: Border.all(
-              color: unlocked 
-                  ? badge['color'] as Color
-                  : Colors.grey.withOpacity(0.3),
+              color: AppColors.accent,
               width: 2,
             ),
-            boxShadow: unlocked
-                ? [
-                    BoxShadow(
-                      color: (badge['color'] as Color).withOpacity(0.3),
-                      blurRadius: 10,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accent.withOpacity(0.3),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
           ),
-          child: Icon(
-            badge['icon'] as IconData,
-            color: unlocked
-                ? badge['color'] as Color
-                : Colors.grey.withOpacity(0.5),
-            size: 30,
-          ),
+          child: badge['badge_image'] != null && badge['badge_image'].toString().isNotEmpty
+              ? Image.network(badge['badge_image'], fit: BoxFit.cover)
+              : const Icon(Icons.emoji_events, color: AppColors.accent, size: 30),
         ),
         const SizedBox(height: 8),
         Text(
-          badge['name'] as String,
+          badge['badge_name'] ?? '',
           style: AppTextStyles.caption.copyWith(
-            color: unlocked
-                ? Colors.white
-                : Colors.grey.withOpacity(0.7),
-            fontWeight: unlocked
-                ? FontWeight.bold
-                : FontWeight.normal,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
           textAlign: TextAlign.center,
         ),
-        if (!unlocked)
+        if (badge['awarded_at'] != null)
           Text(
-            "Verrouillé",
+            'Débloqué',
             style: AppTextStyles.caption.copyWith(
-              color: Colors.grey.withOpacity(0.5),
+              color: AppColors.success,
               fontSize: 10,
             ),
             textAlign: TextAlign.center,

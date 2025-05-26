@@ -1,29 +1,79 @@
--- Table habitat (DOIT ÊTRE CRÉÉE EN PREMIER)
-CREATE TABLE habitat (
+-- Table: users
+CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    avatar TEXT,
+    bio TEXT,
+    total_scans INT DEFAULT 0,
+    animals_identified INT DEFAULT 0,
+    favorite_biome VARCHAR(255),
+    member_since DATE
 );
 
--- Table species
-CREATE TABLE species (
+-- Table: ecosystems
+CREATE TABLE ecosystems (
     id SERIAL PRIMARY KEY,
-    description TEXT NOT NULL,
-    common_name VARCHAR(255) NOT NULL,
-    scientific_name VARCHAR(255) NOT NULL,
-    family VARCHAR(255),
-    size VARCHAR(255),
-    region VARCHAR(255),
-    habitat_id INT REFERENCES habitat(id),  -- Référence maintenant valide
-    fun_fact TEXT,
-    animal_image_url TEXT
-);
-
--- Table prints
-CREATE TABLE prints (
-    id SERIAL PRIMARY KEY,
-    species_id INT REFERENCES species(id),
-    image BYTEA NOT NULL,
-    capture_date DATE,
+    name VARCHAR(255) NOT NULL,
+    animal_count INT DEFAULT 0,
     location VARCHAR(255),
+    image TEXT,
+    description TEXT
+);
+
+-- Table: animals (species)
+CREATE TABLE animals (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    scientific_name VARCHAR(255),
+    category VARCHAR(255),
+    image TEXT,
+    endangered BOOLEAN DEFAULT FALSE,
+    tags TEXT[],
+    conservation_status VARCHAR(255),
+    habitat VARCHAR(255),
+    footprint_type VARCHAR(255),
+    ecosystem_id INT REFERENCES ecosystems(id)
+);
+
+-- Table: scans (prints)
+CREATE TABLE scans (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    animal_id INT REFERENCES animals(id),
+    name VARCHAR(255),
+    scan_date DATE,
+    location VARCHAR(255),
+    image TEXT,
+    accuracy VARCHAR(10),
     analysis_score INT
+);
+
+-- Table: activity_history
+CREATE TABLE activity_history (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    type VARCHAR(50),
+    title VARCHAR(255),
+    activity_date DATE,
+    location VARCHAR(255),
+    image TEXT
+);
+
+-- Table: favorites (bookmarks)
+CREATE TABLE favorites (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    animal_id INT REFERENCES animals(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: badges
+CREATE TABLE badges (
+    id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(id),
+    badge_name VARCHAR(255),
+    badge_image TEXT,
+    awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

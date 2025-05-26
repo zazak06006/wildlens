@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/config.dart';
 import '../widgets/app_routes.dart';
+import '../services/api_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({Key? key}) : super(key: key);
@@ -14,6 +15,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _register() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      // Do not send request to backend here. Just forward info to next page.
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRoutes.completeProfile, arguments: {
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +102,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                ),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -85,10 +117,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, AppRoutes.home);
-                  },
-                  child: Text('Créer un compte', style: AppTextStyles.button.copyWith(color: Colors.white)),
+                  onPressed: _isLoading ? null : _register,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text('Créer un compte', style: AppTextStyles.button.copyWith(color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 16),

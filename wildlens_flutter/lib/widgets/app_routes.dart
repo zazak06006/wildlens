@@ -6,7 +6,6 @@ import '../screens/animals/animals_screen.dart';
 import '../screens/animals/animal_detail_screen.dart';
 import '../screens/explore/explore_screen.dart';
 import '../screens/profile/profile_screen.dart';
-import '../screens/ar_view/ar_view_screen.dart';
 import '../screens/ecosystem/ecosystem_screen.dart';
 import '../screens/scan/scan_list_screen.dart';
 import '../screens/ecosystem/ecosystem_detail_screen.dart';
@@ -14,6 +13,8 @@ import '../screens/scan/scan_detail_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/chatbot_screen.dart';
+import '../screens/profile/edit_profile_screen.dart';
+import '../screens/profile/complete_profile_screen.dart';
 
 class AppRoutes {
   // Route names
@@ -25,7 +26,6 @@ class AppRoutes {
   static const String animalDetails = '/animal-details';
   static const String explore = '/explore';
   static const String profile = '/profile';
-  static const String arView = '/ar-view';
   static const String ecosystem = '/ecosystem';
   static const String scanList = '/scan-list';
   static const String ecosystemDetail = '/ecosystem-detail';
@@ -33,6 +33,8 @@ class AppRoutes {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String chatbot = '/chatbot';
+  static const String editProfile = '/edit-profile';
+  static const String completeProfile = '/complete-profile';
 
   // Route generator
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -69,7 +71,7 @@ class AppRoutes {
         final args = settings.arguments as Map<String, dynamic>;
         return PageRouteBuilder(
           pageBuilder: (_, __, ___) => AnimalDetailScreen(
-            animalName: args['animalName'],
+            animalId: args['animalId'],
             animalImage: args['animalImage'] ?? '',
           ),
           transitionsBuilder: _zoomTransition,
@@ -88,16 +90,6 @@ class AppRoutes {
           pageBuilder: (_, __, ___) => const ProfileScreen(),
           transitionsBuilder: _slideTransition,
           transitionDuration: const Duration(milliseconds: 400),
-        );
-        
-      case arView:
-        final args = settings.arguments as Map<String, dynamic>;
-        return PageRouteBuilder(
-          pageBuilder: (_, __, ___) => ARViewScreen(
-            modelName: args['modelName'],
-          ),
-          transitionsBuilder: _zoomTransition,
-          transitionDuration: const Duration(milliseconds: 600),
         );
       
       case ecosystem:
@@ -149,6 +141,22 @@ class AppRoutes {
           pageBuilder: (_, __, ___) => const ChatbotScreen(),
           transitionsBuilder: _fadeTransition,
           transitionDuration: const Duration(milliseconds: 500),
+        );
+      
+      case editProfile:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => EditProfileScreen(userData: args ?? {}),
+        );
+      
+      case completeProfile:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => CompleteProfileScreen(
+            name: args?['name'] ?? '',
+            email: args?['email'] ?? '',
+            password: args?['password'] ?? '',
+          ),
         );
       
       default:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/config.dart';
 import '../widgets/app_routes.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -13,6 +14,28 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  String? _error;
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      await ApiService().login(_emailController.text.trim(), _passwordController.text);
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } catch (e) {
+      setState(() {
+        _error = 'Email ou mot de passe incorrect';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,12 +98,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.lg),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, AppRoutes.home);
-                  },
-                  child: Text('Se connecter', style: AppTextStyles.button.copyWith(color: Colors.white)),
+                  onPressed: _isLoading ? null : _login,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text('Se connecter', style: AppTextStyles.button.copyWith(color: Colors.white)),
                 ),
               ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () {

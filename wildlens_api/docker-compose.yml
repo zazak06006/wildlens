@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=wildlens
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ../wildlens_database/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/wildlens
+      - MODEL_PATH=/app/animal_classifier_model.pth
+      - SECRET_KEY=your_production_secret_key
+      - CLOUDINARY_CLOUD_NAME=dhbuz6quf
+      - CLOUDINARY_API_KEY=622983176859212
+      - CLOUDINARY_API_SECRET=5yJlPZECyQQdRyVuyZHplu_ttQ4
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

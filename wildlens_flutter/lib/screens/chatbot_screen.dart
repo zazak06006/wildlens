@@ -30,10 +30,8 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       );
       String botReply;
       if (response.statusCode == 200) {
-        // Try to parse JSON, fallback to plain text
         try {
           final data = jsonDecode(response.body);
-          // Try common keys for AI/chatbot responses
           botReply = data['reply']?.toString()
             ?? data['text']?.toString()
             ?? data['message']?.toString()
@@ -45,12 +43,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         } catch (_) {
           botReply = response.body;
         }
-        // Fallback if botReply is empty
         if (botReply.trim().isEmpty) {
           botReply = 'Aucune réponse du bot.';
         }
       } else {
-        // Show error details for debugging
         botReply = 'Erreur: ${response.statusCode}\n${response.body}';
       }
       setState(() {
@@ -68,6 +64,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(title: const Text('Chatbot')),
       body: Column(
         children: [
@@ -100,27 +97,29 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               padding: EdgeInsets.all(8.0),
               child: CircularProgressIndicator(),
             ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    onSubmitted: (_) => _sendMessage(),
-                    decoration: const InputDecoration(
-                      hintText: 'Écrivez un message...',
-                      border: OutlineInputBorder(),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      onSubmitted: (_) => _sendMessage(),
+                      decoration: const InputDecoration(
+                        hintText: 'Écrivez un message...',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _isLoading ? null : _sendMessage,
-                  color: Colors.blueAccent,
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: _isLoading ? null : _sendMessage,
+                    color: Colors.blueAccent,
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -133,4 +132,4 @@ class _ChatMessage {
   final String text;
   final bool isUser;
   _ChatMessage({required this.text, required this.isUser});
-} 
+}
