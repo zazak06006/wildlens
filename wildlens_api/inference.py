@@ -1,78 +1,35 @@
+"model toutes les fonctions"
 import torch
 from torchvision import models, transforms
 from PIL import Image
 import os
 import torch.nn as nn
+from cbam import CBAM
 
-# Définition CBAM identique à ton modèle d'entraînement
-class ChannelAttention(nn.Module):
-    def __init__(self, in_planes, ratio=16):
-        super(ChannelAttention, self).__init__()
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.max_pool = nn.AdaptiveMaxPool2d(1)
-        self.fc1 = nn.Conv2d(in_planes, in_planes // ratio, 1, bias=False)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Conv2d(in_planes // ratio, in_planes, 1, bias=False)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        avg_out = self.fc2(self.relu(self.fc1(self.avg_pool(x))))
-        max_out = self.fc2(self.relu(self.fc1(self.max_pool(x))))
-        out = avg_out + max_out
-        return self.sigmoid(out)
-
-class SpatialAttention(nn.Module):
-    def __init__(self, kernel_size=7):
-        super(SpatialAttention, self).__init__()
-        self.conv = nn.Conv2d(2, 1, kernel_size, padding=kernel_size//2, bias=False)
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, x):
-        avg_out = torch.mean(x, dim=1, keepdim=True)
-        max_out, _ = torch.max(x, dim=1, keepdim=True)
-        x = torch.cat([avg_out, max_out], dim=1)
-        x = self.conv(x)
-        return self.sigmoid(x)
-
-class CBAM(nn.Module):
-    def __init__(self, in_planes, ratio=16, kernel_size=7):
-        super(CBAM, self).__init__()
-        self.ca = ChannelAttention(in_planes, ratio)
-        self.sa = SpatialAttention(kernel_size)
-
-    def forward(self, x):
-        x = x * self.ca(x)
-        x = x * self.sa(x)
-        return x
-
-# Reconstruction du modèle exactement comme à l'entraînement
-class AnimalClassifier(nn.Module):
+class SimpleClassifier(nn.Module):
     def __init__(self, num_classes=26):
-        super(AnimalClassifier, self).__init__()
-        base_model = models.efficientnet_b3(weights=None)
-        in_planes = base_model.features[-1][0].out_channels
-        self.features = nn.Sequential(
-            *list(base_model.features),
-            CBAM(in_planes)
-        )
-        self.avgpool = base_model.avgpool
-        self.classifier = nn.Sequential(
-            nn.Linear(base_model.classifier[1].in_features, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(0.4),
-            nn.Linear(256, 128),
-            nn.BatchNorm1d(128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_classes)
-        )
+        super(SimpleClassifier, self).__init__()
+        weights = models.ResNet18_Weights.DEFAULT
+        self.resnet = models.resnet18(weights=weights)
+        num_features = self.resnet.fc.in_features
+        self.cbam = CBAM(512)  # ResNet18's last conv layer has 512 channels
+        self.resnet.fc = nn.Linear(num_features, num_classes)
 
     def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
+        x = self.resnet.conv1(x)
+        x = self.resnet.bn1(x)
+        x = self.resnet.relu(x)
+        x = self.resnet.maxpool(x)
+
+        x = self.resnet.layer1(x)
+        x = self.resnet.layer2(x)
+        x = self.resnet.layer3(x)
+        x = self.resnet.layer4(x)
+
+        x = self.cbam(x)
+        x = self.resnet.avgpool(x)
         x = torch.flatten(x, 1)
-        x = self.classifier(x)
+        x = self.resnet.fc(x)
         return x
 
 # Liste des classes
@@ -85,15 +42,27 @@ CLASS_NAMES = [
 ]
 
 # Chargement du modèle entraîné une seule fois au niveau du module
-MODEL_PATH = os.getenv("MODEL_PATH", "./animal_classifier_model.pth")
+MODEL_PATH = os.getenv("MODEL_PATH", "./best_model.pth")
 model = None
 
 def load_model(model_path=MODEL_PATH):
     global model
     if model is None:
-        m = AnimalClassifier(num_classes=len(CLASS_NAMES))
-        state_dict = torch.load(model_path, map_location=torch.device("cpu"))
-        m.load_state_dict(state_dict)
+        m = SimpleClassifier(num_classes=len(CLASS_NAMES))
+        if os.path.exists(model_path):
+            try:
+                state_dict = torch.load(model_path, map_location=torch.device("cpu"))
+                # Supprimer les préfixes 'module.' du state_dict si nécessaire
+                new_state_dict = {}
+                for k, v in state_dict.items():
+                    if k.startswith('module.'):
+                        k = k[7:]  # Supprimer 'module.'
+                    new_state_dict[k] = v
+                m.load_state_dict(new_state_dict, strict=False)
+            except Exception as e:
+                print(f"Erreur lors du chargement du modèle : {str(e)}")
+                # Utiliser le modèle pré-entraîné par défaut
+                pass
         m.eval()
         model = m
     return model
@@ -110,15 +79,23 @@ preprocess = transforms.Compose([
 def predict_image(image_path, model=None):
     if model is None:
         model = load_model()
-    image = Image.open(image_path).convert("RGB")
-    input_tensor = preprocess(image).unsqueeze(0)
-    with torch.no_grad():
-        output = model(input_tensor)
-        probabilities = torch.nn.functional.softmax(output[0], dim=0)
-        confidence, predicted_idx = torch.max(probabilities, 0)
+    try:
+        image = Image.open(image_path).convert("RGB")
+        input_tensor = preprocess(image).unsqueeze(0)
+        with torch.no_grad():
+            output = model(input_tensor)
+            probabilities = torch.nn.functional.softmax(output[0], dim=0)
+            confidence, predicted_idx = torch.max(probabilities, 0)
+            return {
+                "animal_name": CLASS_NAMES[predicted_idx.item()],
+                "confidence": float(confidence.item()),
+                "details": None
+            }
+    except Exception as e:
+        print(f"Erreur lors de la prédiction : {str(e)}")
         return {
-            "animal_name": CLASS_NAMES[predicted_idx.item()],
-            "confidence": float(confidence.item()),
-            "details": None
+            "animal_name": "inconnu",
+            "confidence": 0.0,
+            "details": str(e)
         }
 

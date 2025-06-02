@@ -70,20 +70,21 @@ class AnimalOut(AnimalBase):
 
 # Scan Schemas
 class ScanBase(BaseModel):
-    user_id: int
-    animal_id: Optional[int] = None
-    name: Optional[str] = None
-    scan_date: Optional[date] = None
-    location: Optional[str] = None
-    image: Optional[str] = None
-    accuracy: Optional[str] = None
-    analysis_score: Optional[int] = None
+    image_url: str
+    animal_name: str
+    confidence: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    scan_date: Optional[datetime] = Field(default_factory=datetime.now)
+    details: Optional[str] = None
 
 class ScanCreate(ScanBase):
     pass
 
 class ScanOut(ScanBase):
     id: int
+    user_id: int
+    
     class Config:
         from_attributes = True
 

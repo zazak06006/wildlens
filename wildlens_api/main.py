@@ -1,3 +1,4 @@
+"main"
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -213,3 +214,73 @@ def analyze_footprint(file: UploadFile = File(...)):
     result = inference.predict_image(temp_path)
     os.remove(temp_path)
     return result
+
+@app.post("/analyze/image", response_model=schemas.ScanOut)
+async def analyze_image(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(auth.get_current_user)
+):
+    try:
+        # Sauvegarder temporairement l'image
+        temp_path = f"temp_{file.filename}"
+        with open(temp_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # Analyser l'image
+        result = inference.predict_image(temp_path)
+
+        # Uploader l'image sur Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            temp_path,
+            folder="scans",
+            resource_type="image"
+        )
+
+        # Supprimer le fichier temporaire
+        os.remove(temp_path)
+
+        # Créer un nouveau scan dans la base de données
+        scan_data = schemas.ScanCreate(
+            image_url=upload_result["secure_url"],
+            animal_name=result["animal_name"],
+            confidence=result["confidence"],
+            latitude=None,  # À implémenter plus tard
+            longitude=None,  # À implémenter plus tard
+            user_id=current_user.id
+        )
+        scan = crud.create_scan(db, scan_data, current_user.id)
+        return scan
+
+    except Exception as e:
+        import traceback
+        print("[Scan Error]", traceback.format_exc())
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise HTTPException(status_code=400, detail=f"Scan failed: {str(e)}")
+
+@app.post("/test/analyze-image")
+async def test_analyze_image(
+    file: UploadFile = File(...)
+):
+    try:
+        # Validate file type and size
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Invalid file type")
+        
+        # Save the file temporarily
+        temp_path = f"temp_{file.filename}"
+        try:
+            with open(temp_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Analyze the image
+            result = inference.predict_image(temp_path)
+            return result
+            
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

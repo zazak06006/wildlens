@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copier le fichier de modèle
+COPY best_model.pth .
+
 # Copier le reste des fichiers de l'application
 COPY . .
 
@@ -24,4 +27,4 @@ COPY . .
 EXPOSE 8000
 
 # Use Uvicorn with multiple workers for production
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

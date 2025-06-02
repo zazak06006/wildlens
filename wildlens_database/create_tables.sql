@@ -37,17 +37,17 @@ CREATE TABLE animals (
     ecosystem_id INT REFERENCES ecosystems(id)
 );
 
--- Table: scans (prints)
+-- Table: scans
 CREATE TABLE scans (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(id),
-    animal_id INT REFERENCES animals(id),
-    name VARCHAR(255),
-    scan_date DATE,
-    location VARCHAR(255),
-    image TEXT,
-    accuracy VARCHAR(10),
-    analysis_score INT
+    image_url TEXT NOT NULL,
+    animal_name VARCHAR(255) NOT NULL,
+    confidence FLOAT NOT NULL,
+    latitude FLOAT,
+    longitude FLOAT,
+    scan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    details TEXT
 );
 
 -- Table: activity_history
@@ -61,7 +61,7 @@ CREATE TABLE activity_history (
     image TEXT
 );
 
--- Table: favorites (bookmarks)
+-- Table: favorites
 CREATE TABLE favorites (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(id),

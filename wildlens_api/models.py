@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Date, Table, ARRAY, TIMESTAMP
+"Class de la base de données"
+from sqlalchemy import Column, Integer, String, Text, Boolean, ForeignKey, Date, Table, ARRAY, TIMESTAMP, Float
 from sqlalchemy.orm import relationship, declarative_base
+from sqlalchemy.sql import func
 
 Base = declarative_base()
 
@@ -44,22 +46,20 @@ class Animal(Base):
     footprint_type = Column(String(255))
     ecosystem_id = Column(Integer, ForeignKey('ecosystems.id'))
     ecosystem = relationship('Ecosystem', back_populates='animals')
-    scans = relationship('Scan', back_populates='animal')
     favorites = relationship('Favorite', back_populates='animal')
 
 class Scan(Base):
     __tablename__ = 'scans'
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'))
-    animal_id = Column(Integer, ForeignKey('animals.id'))
-    name = Column(String(255))
-    scan_date = Column(Date)
-    location = Column(String(255))
-    image = Column(Text)
-    accuracy = Column(String(10))
-    analysis_score = Column(Integer)
+    image_url = Column(Text, nullable=False)
+    animal_name = Column(String(255), nullable=False)
+    confidence = Column(Float, nullable=False)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    scan_date = Column(TIMESTAMP, default=func.now())
+    details = Column(Text)
     user = relationship('User', back_populates='scans')
-    animal = relationship('Animal', back_populates='scans')
 
 class ActivityHistory(Base):
     __tablename__ = 'activity_history'
