@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // Enhanced futuristic color palette
 class AppColors {
@@ -47,7 +46,7 @@ class AppColors {
 
 // Enhanced typography styles
 class AppTextStyles {
-  static TextStyle displayLarge = GoogleFonts.spaceGrotesk(
+  static TextStyle displayLarge = TextStyle(
     fontSize: 38,
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
@@ -55,44 +54,44 @@ class AppTextStyles {
     height: 1.1,
   );
   
-  static TextStyle displayMedium = GoogleFonts.spaceGrotesk(
+  static TextStyle displayMedium = TextStyle(
     fontSize: 30,
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
     letterSpacing: -0.5,
   );
   
-  static TextStyle heading = GoogleFonts.spaceGrotesk(
+  static TextStyle heading = TextStyle(
     fontSize: 24,
     fontWeight: FontWeight.bold,
     color: AppColors.textPrimary,
     letterSpacing: -0.5,
   );
   
-  static TextStyle subheading = GoogleFonts.spaceGrotesk(
+  static TextStyle subheading = TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
   );
   
-  static TextStyle body = GoogleFonts.inter(
+  static TextStyle body = TextStyle(
     fontSize: 16,
     color: AppColors.textSecondary,
     height: 1.5,
   );
   
-  static TextStyle bodySmall = GoogleFonts.inter(
+  static TextStyle bodySmall = TextStyle(
     fontSize: 14,
     color: AppColors.textSecondary,
   );
   
-  static TextStyle caption = GoogleFonts.inter(
+  static TextStyle caption = TextStyle(
     fontSize: 12,
     color: AppColors.textHint,
     letterSpacing: 0.2,
   );
   
-  static TextStyle button = GoogleFonts.spaceGrotesk(
+  static TextStyle button = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
@@ -100,18 +99,20 @@ class AppTextStyles {
   );
   
   // New tech-specific text styles
-  static TextStyle mono = GoogleFonts.robotoMono(
+  static TextStyle mono = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w500,
     color: AppColors.accent,
     letterSpacing: 0.5,
+    fontFamily: 'monospace',
   );
   
-  static TextStyle dataLabel = GoogleFonts.robotoMono(
+  static TextStyle dataLabel = TextStyle(
     fontSize: 12,
     fontWeight: FontWeight.bold,
     color: AppColors.quaternary,
     letterSpacing: 1.0,
+    fontFamily: 'monospace',
   );
 }
 

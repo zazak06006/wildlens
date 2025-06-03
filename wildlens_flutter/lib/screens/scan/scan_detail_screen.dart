@@ -52,10 +52,20 @@ class ScanDetailScreen extends StatelessWidget {
                     icon: const Icon(Icons.pets, color: Colors.white),
                     label: Text('Voir la fiche animal', style: AppTextStyles.button.copyWith(color: Colors.white)),
                     onPressed: () {
-                      Navigator.pushNamed(context, AppRoutes.animalDetails, arguments: {
-                        'animalName': scan['animalDetails'],
-                        'animalImage': scan['image'],
-                      });
+                      final animalIdRaw = scan['animal_id'] ?? scan['id'];
+                      final int? animalId = (animalIdRaw is int)
+                          ? animalIdRaw
+                          : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+                      if (animalId != null) {
+                        Navigator.pushNamed(context, AppRoutes.animalDetails, arguments: {
+                          'animalId': animalId,
+                          'animalImage': scan['image'],
+                        });
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+                        );
+                      }
                     },
                   ),
                 ),

@@ -59,6 +59,7 @@ class Scan(Base):
     longitude = Column(Float)
     scan_date = Column(TIMESTAMP, default=func.now())
     details = Column(Text)
+    animal_id = Column(Integer, ForeignKey('animals.id'), nullable=True)
     user = relationship('User', back_populates='scans')
 
 class ActivityHistory(Base):

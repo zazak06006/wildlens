@@ -31,7 +31,7 @@ class _EcosystemDetailScreenState extends State<EcosystemDetailScreen> {
     try {
       final animals = await ApiService().getAnimals();
       setState(() {
-        _animals = animals.where((a) => a['ecosystem'] == widget.ecosystem['name']).toList();
+        _animals = animals.where((a) => a['ecosystem_id'] == widget.ecosystem['id']).toList();
       });
     } catch (e) {
       setState(() {
@@ -77,12 +77,21 @@ class _EcosystemDetailScreenState extends State<EcosystemDetailScreen> {
                           child: Image.network(animal['image'], width: 50, height: 50, fit: BoxFit.cover),
                         ),
                         title: Text(animal['name'], style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
-                        subtitle: Text(animal['species'], style: AppTextStyles.caption),
                         onTap: () {
-                          Navigator.pushNamed(context, AppRoutes.animalDetails, arguments: {
-                            'animalName': animal['name'],
-                            'animalImage': animal['image'],
-                          });
+                          final animalIdRaw = animal['animal_id'] ?? animal['id'];
+                          final int? animalId = (animalIdRaw is int)
+                              ? animalIdRaw
+                              : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+                          if (animalId != null) {
+                            Navigator.pushNamed(context, AppRoutes.animalDetails, arguments: {
+                              'animalId': animalId,
+                              'animalImage': animal['image'],
+                            });
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+                            );
+                          }
                         },
                       ),
                     )),

@@ -123,7 +123,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   
   Future<void> _analyzeImage(String path) async {
     try {
-      final result = await ApiService().analyzeFootprint(path);
+      final result = await ApiService().analyzeImage(path);
       setState(() {
         _isAnalyzing = false;
         _showResult = true;
@@ -486,7 +486,7 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                _analysisResult?['name'] ?? "Animal inconnu",
+                                _analysisResult?['animal_name'] ?? "Animal inconnu",
                                 style: AppTextStyles.heading.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -506,9 +506,19 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                                   FuturisticUI.techButton(
                                     label: "VOIR DÉTAILS",
                                     onPressed: () {
-                                      setState(() {
-                                        _isCameraMode = false;
-                                      });
+                                      final animalIdRaw = _analysisResult?['animal_id'];
+                                      final int? animalId = (animalIdRaw is int)
+                                          ? animalIdRaw
+                                          : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+                                      if (animalId != null) {
+                                        Navigator.pushNamed(context, AppRoutes.animalDetails, arguments: {
+                                          'animalId': animalId,
+                                        });
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+                                        );
+                                      }
                                     },
                                     icon: Icons.search,
                                     color: AppColors.accent,
@@ -889,6 +899,11 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   
   // Primary match card with detailed info
   Widget _buildPrimaryMatchCard(Map<String, dynamic> match) {
+    final animalIdRaw = match['animal_id'] ?? match['id'];
+    final int? animalId = (animalIdRaw is int)
+        ? animalIdRaw
+        : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+    final String animalImage = (match['image'] ?? '').toString();
     return FuturisticUI.neonContainer(
       neonColor: AppColors.accent,
       child: Column(
@@ -991,14 +1006,21 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                 child: FuturisticUI.techButton(
                   label: "VOIR DÉTAILS",
                   onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.animalDetails,
-                      arguments: {
-                        'animalName': match['name'],
-                        'animalImage': match['image'],
-                      },
-                    );
+                    print('[DEBUG] Redirection animalId: '
+                          '[32m[1m$animalId[0m, image: [34m$animalImage[0m');
+                    if (animalId != null) {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.animalDetails,
+                        arguments: {
+                          'animalId': 24,
+                        },
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+                      );
+                    }
                   },
                   icon: Icons.visibility,
                   color: AppColors.accent,
@@ -1013,6 +1035,11 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
   
   // Secondary match card with less detail
   Widget _buildSecondaryMatchCard(Map<String, dynamic> match) {
+    final animalIdRaw = match['animal_id'] ?? match['id'];
+    final int? animalId = (animalIdRaw is int)
+        ? animalIdRaw
+        : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+    final String animalImage = (match['image'] ?? '').toString();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: FuturisticUI.glassContainer(
@@ -1105,14 +1132,22 @@ class _ScanScreenState extends State<ScanScreen> with SingleTickerProviderStateM
                   size: 20,
                 ),
                 onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.animalDetails,
-                    arguments: {
-                      'animalName': match['name'],
-                      'animalImage': match['image'],
-                    },
-                  );
+                  print('[DEBUG] Redirection animalId: '
+                        '[32m[1m$animalId[0m, image: [34m$animalImage[0m');
+                  if (animalId != null) {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.animalDetails,
+                      arguments: {
+                        'animalId': animalId,
+                        'animalImage': animalImage,
+                      },
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+                    );
+                  }
                 },
               ),
             ),

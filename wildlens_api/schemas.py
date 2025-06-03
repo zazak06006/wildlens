@@ -77,6 +77,7 @@ class ScanBase(BaseModel):
     longitude: Optional[float] = None
     scan_date: Optional[datetime] = Field(default_factory=datetime.now)
     details: Optional[str] = None
+    animal_id: Optional[int] = None
 
 class ScanCreate(ScanBase):
     pass
@@ -138,4 +139,5 @@ class BadgeOut(BadgeBase):
 class FootprintAnalysisResult(BaseModel):
     animal_name: str
     confidence: float
+    animal_id: int
     details: Optional[str] = None

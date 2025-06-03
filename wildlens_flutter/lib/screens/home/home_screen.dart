@@ -616,17 +616,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildEnhancedAnimalCard(Map<String, dynamic> animal, int index) {
     final isFirst = index == 0;
+    final String imageUrl = animal['image'] ?? '';
+    final String name = animal['name'] ?? 'Nom inconnu';
+    final String species = animal['species'] ?? animal['scientific_name'] ?? '';
+    final String conservationStatus = animal['conservationStatus'] ?? animal['conservation_status'] ?? 'Inconnu';
+    final String habitat = animal['habitat'] ?? '';
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
-        Navigator.pushNamed(
-          context,
-          AppRoutes.animalDetails,
-          arguments: {
-            'animalName': animal['name'],
-            'animalImage': animal['image'],
-          },
-        );
+        final animalIdRaw = animal['animal_id'] ?? animal['id'];
+        final int? animalId = (animalIdRaw is int)
+            ? animalIdRaw
+            : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+        if (animalId != null) {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.animalDetails,
+            arguments: {
+              'animalId': animalId,
+              'animalImage': imageUrl,
+            },
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+          );
+        }
       },
       child: Container(
         width: 220,
@@ -657,37 +673,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               child: SizedBox(
                 height: 120,
                 width: double.infinity,
-                child: ShaderMask(
-                  shaderCallback: (rect) => LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.7),
-                    ],
-                    stops: const [0.6, 1.0],
-                  ).createShader(rect),
-                  blendMode: BlendMode.darken,
-                  child: Image.network(
-                    animal['image'],
-                    fit: BoxFit.cover,
-                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: AppColors.cardDark,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                : null,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                            strokeWidth: 2,
-                          ),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: AppColors.cardDark,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                    : null,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey,
+                          child: Icon(Icons.broken_image, color: Colors.white54, size: 40),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      )
+                    : Container(
+                        color: Colors.grey,
+                        child: Icon(Icons.image_not_supported, color: Colors.white54, size: 40),
+                      ),
               ),
             ),
             // Content
@@ -700,11 +713,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(animal['conservationStatus']),
+                      color: _getStatusColor(conservationStatus),
                       borderRadius: BorderRadius.circular(AppRadius.xs),
                     ),
                     child: Text(
-                      animal['conservationStatus'],
+                      conservationStatus,
                       style: AppTextStyles.caption.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -714,14 +727,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   const SizedBox(height: 8),
                   // Name and species
                   Text(
-                    animal['name'],
+                    name,
                     style: AppTextStyles.subheading.copyWith(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),
                   ),
                   Text(
-                    animal['species'],
+                    species,
                     style: AppTextStyles.caption.copyWith(
                       fontStyle: FontStyle.italic,
                       color: AppColors.textSecondary,
@@ -739,7 +752,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          animal['habitat'],
+                          habitat,
                           style: AppTextStyles.caption,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

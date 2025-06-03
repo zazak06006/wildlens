@@ -69,9 +69,19 @@ class AppRoutes {
       
       case animalDetails:
         final args = settings.arguments as Map<String, dynamic>;
+        final animalId = args['animalId'];
+        if (animalId == null || animalId is! int) {
+          return MaterialPageRoute(
+            builder: (_) => Scaffold(
+              body: Center(
+                child: Text('Erreur : identifiant animal manquant ou invalide'),
+              ),
+            ),
+          );
+        }
         return PageRouteBuilder(
           pageBuilder: (_, __, ___) => AnimalDetailScreen(
-            animalId: args['animalId'],
+            animalId: animalId,
             animalImage: args['animalImage'] ?? '',
           ),
           transitionsBuilder: _zoomTransition,

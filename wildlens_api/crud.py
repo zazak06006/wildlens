@@ -47,7 +47,8 @@ def create_scan(db: Session, scan: schemas.ScanCreate, user_id: int):
         confidence=scan.confidence,
         latitude=scan.latitude,
         longitude=scan.longitude,
-        details=scan.details
+        details=scan.details,
+        animal_id=scan.animal_id
     )
     db.add(db_scan)
     db.commit()

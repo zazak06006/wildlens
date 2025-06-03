@@ -29,7 +29,7 @@ class ApiService {
   Future<dynamic> _handleResponse(http.Response response) async {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isEmpty) return null;
-      final decoded = json.decode(response.body);
+      final decoded = json.decode(utf8.decode(response.bodyBytes));
       return decoded;
     } else {
       throw Exception('Request failed with status: ${response.statusCode}');
@@ -274,9 +274,12 @@ class ApiService {
   }
 
   // --- FOOTPRINT ANALYSIS ---
-  Future<dynamic> analyzeFootprint(String filePath) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/analyze/footprint'));
+  Future<dynamic> analyzeImage(String filePath) async {
+    final uri = Uri.parse('$baseUrl/analyze/image');
+    final request = http.MultipartRequest('POST', uri);
     request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    final headers = await _getHeaders(auth: true);
+    request.headers.addAll(headers);
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
     return _handleResponse(response);

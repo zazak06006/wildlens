@@ -23,6 +23,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   
   Map<String, dynamic>? _animalData;
+  String? _ecosystemName;
   bool _isLoading = true;
   String? _error;
   
@@ -41,8 +42,14 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
     });
     try {
       final animal = await ApiService().getAnimal(widget.animalId);
+      String? ecosystemName;
+      if (animal['ecosystem_id'] != null) {
+        final eco = await ApiService().getEcosystem(animal['ecosystem_id']);
+        ecosystemName = eco['name'] ?? null;
+      }
       setState(() {
         _animalData = animal;
+        _ecosystemName = ecosystemName;
       });
     } catch (e) {
       setState(() {
@@ -85,16 +92,8 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
                     children: [
                       _buildAnimalHeader(),
                       const SizedBox(height: 24),
-                      _buildDescriptionSection(),
-                      const SizedBox(height: 24),
                       _buildDetailsGrid(),
-                      const SizedBox(height: 24),
-                      _buildFootprintSection(),
-                      const SizedBox(height: 24),
-                      _buildFactsSection(),
                       const SizedBox(height: 36),
-                      _buildActionButtons(),
-                      const SizedBox(height: 50),
                     ],
                   ),
                 ),
@@ -196,60 +195,96 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
                     ),
                   ),
                   Text(
-                    _animalData?['scientificName'] ?? '',
+                    _animalData?['scientific_name'] ?? '',
                     style: AppTextStyles.body.copyWith(
                       fontStyle: FontStyle.italic,
                       color: AppColors.textSecondary,
                     ),
                   ),
+                  if ((_animalData?['category'] ?? '').toString().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.category, size: 16, color: AppColors.accent),
+                          const SizedBox(width: 4),
+                          Text(
+                            _animalData?['category'] ?? '',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.accent),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if ((_animalData?['endangered'] ?? false) == true)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.error),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Espèce menacée',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
-            
             // Conservation status
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getStatusColor(_animalData?['conservationStatus'] ?? '').withOpacity(0.2),
-                borderRadius: BorderRadius.circular(AppRadius.circular),
-                border: Border.all(
-                  color: _getStatusColor(_animalData?['conservationStatus'] ?? '').withOpacity(0.5),
-                  width: 1,
+            if ((_animalData?['conservation_status'] ?? '').toString().isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStatusColor(_animalData?['conservation_status'] ?? '').withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(AppRadius.circular),
+                  border: Border.all(
+                    color: _getStatusColor(_animalData?['conservation_status'] ?? '').withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  _animalData?['conservation_status'] ?? '',
+                  style: AppTextStyles.caption.copyWith(
+                    color: _getStatusColor(_animalData?['conservation_status'] ?? ''),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              child: Text(
-                _animalData?['conservationStatus'] ?? '',
-                style: AppTextStyles.caption.copyWith(
-                  color: _getStatusColor(_animalData?['conservationStatus'] ?? ''),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
           ],
         ),
-      ],
-    );
-  }
-  
-  // Description section
-  Widget _buildDescriptionSection() {
-    return FuturisticUI.glassContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Description",
-            style: AppTextStyles.subheading.copyWith(
-              color: AppColors.accent,
+        if (_animalData?['tags'] != null && (_animalData?['tags'] as List).isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Wrap(
+              spacing: 8,
+              children: (_animalData?['tags'] as List)
+                  .map<Widget>((tag) => Chip(
+                        label: Text(tag.toString()),
+                        backgroundColor: AppColors.accent.withOpacity(0.15),
+                        labelStyle: AppTextStyles.caption.copyWith(color: AppColors.accent),
+                      ))
+                  .toList(),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            _animalData?['description'] ?? '',
-            style: AppTextStyles.body,
+        if (_animalData?['ecosystem_id'] != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(Icons.public, size: 16, color: AppColors.quaternary),
+                const SizedBox(width: 4),
+                Text(
+                  _ecosystemName != null
+                      ? 'Écosystème : \\$_ecosystemName'
+                      : 'Écosystème inconnu',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.quaternary),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+      ],
     );
   }
   
@@ -264,8 +299,11 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
       mainAxisSpacing: 16,
       children: [
         _buildDetailCard("Habitat", _animalData?['habitat'] ?? '', Icons.terrain),
-        _buildDetailCard("Régime alimentaire", _animalData?['diet'] ?? '', Icons.restaurant),
-        _buildDetailCard("Durée de vie", _animalData?['lifespan'] ?? '', Icons.access_time),
+        _buildDetailCard("Empreinte", _animalData?['footprint_type'] ?? '', Icons.pets),
+        if ((_animalData?['category'] ?? '').toString().isNotEmpty)
+          _buildDetailCard("Catégorie", _animalData?['category'] ?? '', Icons.category),
+        if ((_animalData?['conservation_status'] ?? '').toString().isNotEmpty)
+          _buildDetailCard("Statut", _animalData?['conservation_status'] ?? '', Icons.shield),
       ],
     );
   }
@@ -290,6 +328,7 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.accent,
                   fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
               ),
             ],
@@ -297,8 +336,9 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
           const SizedBox(height: 8),
           Text(
             content,
-            style: AppTextStyles.bodySmall.copyWith(
+            style: AppTextStyles.body.copyWith(
               color: Colors.white,
+              fontSize: 16,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -308,150 +348,6 @@ class _AnimalDetailScreenState extends State<AnimalDetailScreen> {
     );
   }
   
-  // Footprint section
-  Widget _buildFootprintSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Empreinte",
-          style: AppTextStyles.subheading,
-        ),
-        const SizedBox(height: 16),
-        FuturisticUI.neonContainer(
-          neonColor: AppColors.accent,
-          child: Row(
-            children: [
-              // Footprint image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                child: SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Image.network(
-                    _animalData?['footprintImageUrl'] ?? '',
-                    fit: BoxFit.cover,
-                    loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: AppColors.cardDark,
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                : null,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              
-              // Footprint info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Caractéristiques de l'empreinte",
-                      style: AppTextStyles.bodySmall.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Les empreintes de ${_animalData?['name']} sont distinctives avec des coussinets "
-                      "et griffes visibles. Généralement disposées en ligne droite lors "
-                      "de la marche.",
-                      style: AppTextStyles.caption,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-  
-  // Facts section
-  Widget _buildFactsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Faits intéressants",
-          style: AppTextStyles.subheading,
-        ),
-        const SizedBox(height: 16),
-        ..._buildFactsList(),
-      ],
-    );
-  }
-  
-  List<Widget> _buildFactsList() {
-    final facts = _animalData?['facts'] as List<String>? ?? [];
-    return facts.map((fact) => _buildFactItem(fact)).toList();
-  }
-  
-  Widget _buildFactItem(String fact) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: AppColors.quaternary.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.star,
-                color: AppColors.quaternary,
-                size: 12,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              fact,
-              style: AppTextStyles.body,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  // Action buttons at the bottom
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: FuturisticUI.techButton(
-            label: "PARTAGER",
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              // Share functionality would go here
-            },
-            icon: Icons.share,
-            color: AppColors.secondary,
-          ),
-        ),
-      ],
-    );
-  }
   
   // Helper method to get color based on conservation status
   Color _getStatusColor(String status) {

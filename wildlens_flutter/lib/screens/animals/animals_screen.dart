@@ -17,7 +17,7 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
   int _selectedIndex = 2;
   late AnimationController _animationController;
   String _selectedCategory = "Tous";
-  final List<String> _categories = ["Tous", "Mammifères", "Oiseaux", "Reptiles", "Amphibiens"];
+  List<String> _categories = ["Tous"];
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
 
@@ -27,8 +27,9 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
 
   List<dynamic> get _filteredAnimals {
     return _animalsList.where((animal) {
-      final categoryMatch = _selectedCategory == "Tous" || (animal['category'] ?? '') == _selectedCategory;
-      final searchMatch = _searchController.text.isEmpty ||
+      final animalCategory = (animal['category'] ?? '').toString();
+      final categoryMatch = _selectedCategory == "Tous" || animalCategory == _selectedCategory;
+      final searchMatch = _searchController.text.isEmpty || 
           (animal['name'] ?? '').toLowerCase().contains(_searchController.text.toLowerCase()) ||
           (animal['scientific_name'] ?? '').toLowerCase().contains(_searchController.text.toLowerCase());
       return categoryMatch && searchMatch;
@@ -54,8 +55,19 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
     });
     try {
       final animals = await ApiService().getAnimals();
+      // Génère dynamiquement les catégories distinctes
+      final Set<String> categoriesSet = animals
+          .map((a) => (a['category'] ?? '').toString().trim())
+          .where((c) => c.isNotEmpty)
+          .toSet();
+      final List<String> categoriesList = categoriesSet.toList()..sort();
       setState(() {
         _animalsList = animals;
+        _categories = ["Tous", ...categoriesList];
+        // Si la catégorie sélectionnée n'existe plus, on revient à 'Tous'
+        if (!_categories.contains(_selectedCategory)) {
+          _selectedCategory = "Tous";
+        }
       });
     } catch (e) {
       setState(() {
@@ -313,68 +325,126 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
   }
   
   // Animals grid
-  Widget _buildAnimalsList() {
-    final animals = _filteredAnimals;
-    
-    if (animals.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              color: Colors.white.withOpacity(0.5),
-              size: 48,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Aucun animal trouvé",
-              style: AppTextStyles.subheading.copyWith(
-                color: Colors.white.withOpacity(0.7),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Essayez une autre recherche ou catégorie",
-              style: AppTextStyles.caption.copyWith(
-                color: Colors.white.withOpacity(0.5),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+Widget _buildAnimalsList() {
+  if (_isLoading) {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  if (_filteredAnimals.isEmpty) {
+    return const Center(
+      child: Text(
+        "Aucun animal trouvé",
+        style: TextStyle(color: Colors.white),
       ),
-      itemCount: animals.length,
-      itemBuilder: (context, index) {
-        final animal = animals[index];
-        return _buildAnimalCard(animal);
-      },
     );
   }
+
+  return GridView.builder(
+    padding: const EdgeInsets.all(16),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 0.8,
+    ),
+    itemCount: _filteredAnimals.length,
+    itemBuilder: (context, index) {
+      final animal = _filteredAnimals[index];
+      final String imageUrl = animal['image'] ?? '';
+      final String name = animal['name'] ?? 'Nom inconnu';
+
+      return GestureDetector(
+        onTap: () {
+          final animalIdRaw = animal['animal_id'] ?? animal['id'];
+          final int? animalId = (animalIdRaw is int)
+              ? animalIdRaw
+              : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+
+          if (animalId != null) {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.animalDetails,
+              arguments: {
+                'animalId': animalId,
+                'animalImage': imageUrl,
+              },
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Identifiant animal invalide.')),
+            );
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            image: imageUrl.isNotEmpty
+                ? DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+            color: Colors.grey[800], // fallback si pas d’image
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.6),
+                ],
+              ),
+            ),
+            padding: const EdgeInsets.all(12),
+            alignment: Alignment.bottomLeft,
+            child: Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
   
   // Animal card
   Widget _buildAnimalCard(Map<String, dynamic> animal) {
+    final String imageUrl = animal['image'] ?? '';
+    print("Image URL: ${animal['image']}");
+    final String name = animal['name'] ?? 'Nom inconnu';
+    final String scientific = animal['scientific_name'] ?? '';
+    final String category = animal['category'] ?? '';
+    final bool endangered = animal['endangered'] == true;
     return GestureDetector(
       onTap: () {
         HapticFeedback.mediumImpact();
-        Navigator.pushNamed(
-          context,
-          AppRoutes.animalDetails,
-          arguments: {
-            'animalName': animal['name'],
-            'animalImage': animal['image'],
-          },
-        );
+        final animalIdRaw = animal['animal_id'] ?? animal['id'];
+        final int? animalId = (animalIdRaw is int)
+            ? animalIdRaw
+            : (animalIdRaw is String ? int.tryParse(animalIdRaw) : null);
+        if (animalId != null) {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.animalDetails,
+            arguments: {
+              'animalId': animalId,
+              'animalImage': imageUrl,
+            },
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Aucun identifiant animal valide pour la fiche détaillée.')),
+          );
+        }
       },
       child: FuturisticUI.holographicCard(
         child: Stack(
@@ -383,43 +453,34 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
             Positioned.fill(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                child: Image.network(
-                  animal['image'],
-                  fit: BoxFit.cover,
-                  loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      color: AppColors.cardDark,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                              : null,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                          strokeWidth: 2,
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: AppColors.cardDark,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                    : null,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey,
+                          child: Icon(Icons.broken_image, color: Colors.white54, size: 40),
                         ),
+                      )
+                    : Container(
+                        color: Colors.grey,
+                        child: Icon(Icons.image_not_supported, color: Colors.white54, size: 40),
                       ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            
-            // Gradient overlay
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.7),
-                    ],
-                    stops: const [0.6, 1.0],
-                  ),
-                ),
               ),
             ),
             
@@ -434,14 +495,14 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      animal['name'],
+                      name,
                       style: AppTextStyles.bodySmall.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      animal['scientific'],
+                      scientific,
                       style: AppTextStyles.caption.copyWith(
                         color: Colors.white.withOpacity(0.7),
                         fontStyle: FontStyle.italic,
@@ -453,31 +514,32 @@ class _AnimalsScreenState extends State<AnimalsScreen> with SingleTickerProvider
             ),
             
             // Category tag
-            Positioned(
-              top: 12,
-              left: 12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(AppRadius.xs),
-                  border: Border.all(
-                    color: AppColors.quaternary.withOpacity(0.3),
-                    width: 1,
+            if (category.isNotEmpty)
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
+                    border: Border.all(
+                      color: AppColors.quaternary.withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: Text(
-                  animal['category'],
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.quaternary,
-                    fontSize: 10,
+                  child: Text(
+                    category,
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.quaternary,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
               ),
-            ),
             
             // Endangered status
-            if (animal['endangered'] == true)
+            if (endangered)
               Positioned(
                 top: 12,
                 right: 12,

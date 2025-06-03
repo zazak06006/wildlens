@@ -15,6 +15,7 @@ import os
 import cloudinary
 import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
+import models
 
 Base.metadata.create_all(bind=engine)
 
@@ -206,14 +207,18 @@ def remove_badge(badge_id: int, db: Session = Depends(get_db), current_user=Depe
     return crud.remove_badge(db, current_user.id, badge_id)
 
 # --- FOOTPRINT ANALYSIS ---
-@app.post("/analyze/footprint", response_model=schemas.FootprintAnalysisResult)
-def analyze_footprint(file: UploadFile = File(...)):
-    temp_path = f"/tmp/{file.filename}"
-    with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-    result = inference.predict_image(temp_path)
-    os.remove(temp_path)
-    return result
+#@app.post("/analyze/footprint", response_model=schemas.FootprintAnalysisResult)
+#def analyze_footprint(file: UploadFile = File(...), db: Session = Depends(get_db)):
+#    temp_path = f"/tmp/{file.filename}"
+#    with open(temp_path, "wb") as buffer:
+#        shutil.copyfileobj(file.file, buffer)
+#    result = inference.predict_image(temp_path)
+#    os.remove(temp_path)
+    # Cherche l'animal dans la base à partir du nom prédit
+#    animal = db.query(models.Animal).filter(models.Animal.name == result["animal_name"]).first()
+#    animal_id = animal.id if animal else None
+#    result["animal_id"] = animal_id
+#    return result
 
 @app.post("/analyze/image", response_model=schemas.ScanOut)
 async def analyze_image(
@@ -240,6 +245,14 @@ async def analyze_image(
         # Supprimer le fichier temporaire
         os.remove(temp_path)
 
+        # Cherche l'animal dans la base à partir du nom prédit
+        animal = db.query(models.Animal).filter(models.Animal.name == result["animal_name"]).first()
+        animal_id = animal.id if animal else None
+        if animal_id is None:
+            print(f"[WARNING] No animal found for predicted name: {result['animal_name']}")
+        
+        print(f"[INFO] Animal ID: {animal_id} , type: {type(animal_id)}")
+
         # Créer un nouveau scan dans la base de données
         scan_data = schemas.ScanCreate(
             image_url=upload_result["secure_url"],
@@ -247,7 +260,8 @@ async def analyze_image(
             confidence=result["confidence"],
             latitude=None,  # À implémenter plus tard
             longitude=None,  # À implémenter plus tard
-            user_id=current_user.id
+            user_id=current_user.id,
+            animal_id=animal_id
         )
         scan = crud.create_scan(db, scan_data, current_user.id)
         return scan
